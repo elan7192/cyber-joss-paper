@@ -1,0 +1,41 @@
+:root{--c:#00f0ff;--m:#ff2bd6;--bg:#07040f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 30%,#1a0630,var(--bg) 70%);color:#e8e8ff;font-family:"PingFang TC","Noto Sans TC",system-ui,sans-serif;overflow-x:hidden;touch-action:manipulation}
+.scanlines{pointer-events:none;position:fixed;inset:0;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+header{text-align:center;padding:24px 12px 4px}
+.glitch{position:relative;font-size:clamp(2.2rem,9vw,4rem);margin:0;color:#fff;letter-spacing:.1em;text-shadow:0 0 8px var(--c),0 0 24px var(--m)}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;left:0;right:0;top:0;overflow:hidden}
+.glitch::before{color:var(--c);animation:g1 2.5s infinite linear alternate;transform:translate(-2px)}
+.glitch::after{color:var(--m);animation:g2 3s infinite linear alternate;transform:translate(2px)}
+@keyframes g1{0%,90%{clip-path:inset(0 0 100% 0)}92%{clip-path:inset(20% 0 50% 0)}96%{clip-path:inset(60% 0 10% 0)}100%{clip-path:inset(0 0 100% 0)}}
+@keyframes g2{0%,85%{clip-path:inset(0 0 100% 0)}88%{clip-path:inset(40% 0 30% 0)}94%{clip-path:inset(5% 0 80% 0)}100%{clip-path:inset(0 0 100% 0)}}
+.sub{color:var(--c);font-size:.8rem;letter-spacing:.2em;opacity:.8}
+main{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;padding:12px}
+.furnace-wrap{display:flex;flex-direction:column;align-items:center}
+.furnace{position:relative;width:min(86vw,340px);height:380px;border:2px solid var(--m);border-radius:18px 18px 8px 8px;box-shadow:0 0 18px var(--m),inset 0 0 30px rgba(255,43,214,.3);background:#0d0418;overflow:hidden;transition:box-shadow .2s}
+.furnace.hot{box-shadow:0 0 40px #ffb000,0 0 80px var(--m),inset 0 0 50px rgba(255,160,0,.5)}
+.roof{position:absolute;top:0;left:0;right:0;text-align:center;padding:8px;font-size:1.6rem;font-weight:bold;color:#ffd84a;text-shadow:0 0 10px #ff9a00;border-bottom:2px solid var(--c);background:rgba(0,240,255,.08);z-index:2}
+#fire{position:absolute;inset:0;width:100%;height:100%}
+.mouth{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:.8rem;color:var(--c);opacity:.7;z-index:2}
+.stats{margin-top:14px;font-size:1.1rem;color:var(--c);text-shadow:0 0 6px var(--c)}
+#count{font-size:1.6rem;color:#fff}
+.blessing{margin-top:10px;min-height:2em;font-size:1.3rem;color:#ffe066;text-shadow:0 0 10px #ff9a00,0 0 20px var(--m);text-align:center;transition:opacity .3s}
+.blessing.pop{animation:pop .8s}
+@keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+.papers{width:min(92vw,360px);text-align:center}
+h2{color:var(--m);text-shadow:0 0 8px var(--m);font-size:1.1rem}
+.tray{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.paper{height:90px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.2rem;border-radius:4px;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;border:2px solid;position:relative}
+.paper::after{content:"";position:absolute;inset:8px;border:1px dashed currentColor;opacity:.5}
+.gold{background:linear-gradient(135deg,#7a5200,#d4a017);color:#fff3b0;border-color:#ffd84a;box-shadow:0 0 12px #ffb000}
+.silver{background:linear-gradient(135deg,#444,#b8c4d0);color:#fff;border-color:#e0f0ff;box-shadow:0 0 12px #9cf}
+.rebirth{background:linear-gradient(135deg,#5a0030,#c03070);color:#ffd0ea;border-color:var(--m);box-shadow:0 0 12px var(--m)}
+.custom{background:linear-gradient(135deg,#003a44,#00a0b0);color:#e0ffff;border-color:var(--c);box-shadow:0 0 12px var(--c)}
+.paper.selected{outline:3px solid #fff;outline-offset:3px}
+.ghost{position:fixed;z-index:40;pointer-events:none;width:90px;height:70px;opacity:.9;transform:translate(-50%,-50%) rotate(-8deg)}
+.flying{position:fixed;z-index:40;pointer-events:none;width:90px;height:70px;transition:all .6s cubic-bezier(.5,0,.8,.4)}
+.custom-row{display:flex;gap:8px;margin:14px 0}
+input{flex:1;background:#0d0418;border:1px solid var(--c);color:#fff;padding:10px;border-radius:6px;font-size:16px}
+button{background:transparent;border:1px solid var(--m);color:var(--m);padding:10px 14px;border-radius:6px;font-size:1rem;text-shadow:0 0 6px var(--m);cursor:pointer}
+.toggle{width:100%}
+footer{text-align:center;font-size:.75rem;opacity:.5;padding:20px}
