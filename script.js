@@ -366,8 +366,9 @@
   // ---------------------------------------------------------------- state
   const burning = [], fire = [], flyers = [];
   const embers = [], ashes = [], smoke = [], texts = [];
-  let ghost = null, heat = 0.3, time = 0;
-  let fireAcc = 0, emberAcc = 0, smokeAcc = 0;
+  const inner = [], exhaust = []; // debris drawn up the flue, and what's queued to come out the vents
+  let ghost = null, heat = 0.3, draft = 0, time = 0, lastPop = -1;
+  let fireAcc = 0, emberAcc = 0, mouthAcc = 0, smokeAcc = 0;
 
   const COALS = Array.from({ length: 22 }, () => ({ x: rand(120, 240), y: rand(362, 371), r: rand(5, 11), ph: rand(0, 6.28), sp: rand(1.5, 4) }));
 
@@ -398,25 +399,42 @@
   function emitEmber(x, y, vx = rand(-35, 35), vy = -rand(60, 150)) {
     embers.push({ x, y, px: x, py: y, vx, vy, age: 0, life: rand(0.9, 2.2), size: rand(0.8, 1.8) });
   }
-  function emitAsh(x, y) {
+  function emitAsh(x, y, size = rand(2, 5), vy = -rand(15, 40)) {
     ashes.push({
-      x, y, vx: rand(-12, 12), vy: -rand(15, 40), rot: rand(0, 6.28), vr: rand(-4, 4),
-      age: 0, life: rand(2, 4), size: rand(2, 5), glow: Math.random() < 0.5,
+      x, y, vx: rand(-15, 15), vy, rot: rand(0, 6.28), vr: rand(-4, 4), flip: rand(0, 6.28), vf: rand(3, 9),
+      age: 0, life: rand(2.5, 4.5), size, glow: Math.random() < 0.65,
     });
   }
   function emitSmoke(x, y) {
-    smoke.push({ x, y, vx: rand(-6, 6), vy: -rand(18, 30), age: 0, life: rand(2.5, 4), size: rand(10, 16) });
+    smoke.push({ x, y, vx: rand(-6, 6), vy: -rand(18, 30) * (1 + 1.3 * draft), age: 0, life: rand(2.5, 4), size: rand(10, 16) });
+  }
+  function emitInner(x, y, kind) {
+    inner.push({
+      x, y, px: x, py: y, vx: rand(-15, 15), vy: -rand(20, 50), age: 0, kind,
+      size: kind === 'ash' ? rand(3, 6) : rand(0.8, 1.6), rot: rand(0, 6.28), vr: rand(-8, 8),
+    });
+  }
+  // Stack effect: whatever the draft pulls up the flue comes out of a vent.
+  function ventBurst(kind, size) {
+    const [vx, vy] = pick(VENTS);
+    const x = vx + rand(3, 17), y = vy + rand(4, 14), up = -rand(70, 150) * (0.8 + 0.5 * draft);
+    if (kind === 'spark') emitEmber(x, y, rand(-30, 30), up * 1.3);
+    else emitAsh(x, y, size, up);
   }
 
   // ---------------------------------------------------------------- actions
-  function throwPaper(paper, from) {
+  // A throw is a toss to just in front of the mouth, then the draft sucks it in.
+  // `sucked` papers (dragged close enough) skip the toss.
+  function throwPaper(paper, from, sucked = false) {
+    const x1 = MOUTH_C.x + rand(-28, 28);
     flyers.push({
       paper, label: labelFor(paper), art: cardArt.get(paper.id),
       x0: from.x, y0: from.y, w0: from.w,
-      x1: MOUTH_C.x + rand(-28, 28), y1: MOUTH_C.y + rand(0, 14),
-      t: 0, dur: rand(0.6, 0.75), rot0: rand(-0.3, 0.3), spin: rand(-2.2, 2.2),
+      hx: sucked ? from.x : x1 + rand(-12, 12), hy: sucked ? from.y : rand(288, 300),
+      x1, y1: MOUTH_C.y + rand(0, 14),
+      t: 0, toss: sucked ? 0 : 0.55, dur: sucked ? 0.45 : rand(0.95, 1.1), whooshed: false,
+      rot0: rand(-0.3, 0.3), spin: sucked ? rand(-0.8, 0.8) : rand(-2.2, 2.2),
     });
-    Sound.whoosh();
     if (navigator.vibrate) navigator.vibrate(10);
   }
 
@@ -429,7 +447,8 @@
   function land(f) {
     if (burning.length >= MAX_BURNING) burning[0].t = Math.max(burning[0].t, 1); // hurry the oldest along
     burning.push(makeBurner(f.paper, f.label, f.x1, f.y1, f.rot0 + f.spin));
-    for (let i = 0; i < 18 * DENSITY; i++) emitEmber(f.x1 + rand(-20, 20), f.y1 - rand(0, 10), rand(-70, 70), -rand(80, 220));
+    for (let i = 0; i < 10 * DENSITY; i++) emitEmber(f.x1 + rand(-20, 20), f.y1 - rand(0, 10), rand(-60, 60), -rand(80, 200));
+    for (let i = 0; i < 8 * DENSITY; i++) emitInner(f.x1 + rand(-20, 20), f.y1 - rand(0, 10), 'spark');
     Sound.ignite();
 
     total++; session++;
@@ -440,7 +459,10 @@
 
     const msg = f.paper.id === 'wish' ? `「${f.label}」已上達天聽` : pick(BLESSINGS);
     blessEl.textContent = `✦ ${msg} ✦`;
-    blessEl.classList.remove('pop'); void blessEl.offsetWidth; blessEl.classList.add('pop');
+    if (time - lastPop > 0.8) { // don't restart the pop on every paper of a long-press stack
+      lastPop = time;
+      blessEl.classList.remove('pop'); void blessEl.offsetWidth; blessEl.classList.add('pop');
+    }
     for (const t of texts) t.age = Math.max(t.age, t.life - 0.25); // fade out the previous one
     texts.push({ str: msg, x: 180, y: 30, age: 0, life: 2.2 });
   }
@@ -451,6 +473,21 @@
     const target = 0.3 + 0.38 * burning.length;
     heat += (Math.min(target, 2.2) - heat) * Math.min(1, dt * (target > heat ? 4 : 0.7));
     const power = clamp(heat, 0.3, 1.6);
+    draft = clamp(heat - 0.3, 0, 1.6);
+
+    if (ghost) {
+      // the draft tugs a dragged paper toward the mouth, and swallows it once it's close
+      const dx = MOUTH_C.x - ghost.px, dy = 310 - ghost.py, d = Math.hypot(dx, dy);
+      ghost.pull = clamp(1 - (d - 70) / 150, 0, 1) ** 2 * (0.5 + 0.25 * Math.min(draft, 1));
+      ghost.x = ghost.px + dx * ghost.pull;
+      ghost.y = ghost.py + dy * ghost.pull;
+      if (d < 85 + 20 * Math.min(draft, 1)) {
+        const g = ghost;
+        ghost = null;
+        throwPaper(g.paper, { x: g.x, y: g.y, w: 92 * (1 - 0.15 * g.pull) }, true);
+        g.onSucked();
+      }
+    }
 
     // fire bed
     fireAcc += dt * (28 + 70 * power) * DENSITY;
@@ -459,7 +496,7 @@
     // burning papers
     for (const b of burning) {
       b.t += dt / b.dur;
-      b.y -= dt * 3;
+      b.y -= dt * (3 + 16 * Math.max(0, b.t)); // lifted by the updraft as it burns
       b.rot += b.vr * dt;
       if (b.t > -0.05) paintBurn(b);
       if (b.t > 0 && b.t < 0.95 && Math.random() < dt * 40 * DENSITY) emitFire(b.x, b.y, 18, 1);
@@ -468,10 +505,10 @@
         const k = b.t - b.map[idx];
         if (k >= 0 && k < EDGE && Math.random() < 0.18 * DENSITY) {
           const p = burnerPoint(b, idx % BURN_W, (idx / BURN_W) | 0);
-          emitEmber(p.x, p.y);
-        } else if (k >= EDGE && k < CHAR && Math.random() < 0.05 * DENSITY) {
+          emitInner(p.x, p.y, 'spark');
+        } else if (k >= EDGE && k < CHAR && Math.random() < 0.07 * DENSITY) {
           const p = burnerPoint(b, idx % BURN_W, (idx / BURN_W) | 0);
-          emitAsh(p.x, p.y);
+          emitInner(p.x, p.y, 'ash');
         }
       }
     }
@@ -481,15 +518,36 @@
       const p = fire[i];
       p.age += dt;
       if (p.age >= p.life) { fire.splice(i, 1); continue; }
-      p.vx = (p.vx + rand(-70, 70) * dt) * 0.97;
-      p.vy -= 40 * dt;
+      // the updraft pulls flames toward the centre and stretches them upward
+      p.vx = (p.vx + rand(-70, 70) * dt + (MOUTH_C.x - p.x) * (0.6 + 1.4 * draft) * dt) * 0.97;
+      p.vy -= (40 + 70 * draft) * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
     }
 
-    // sparks from the mouth, smoke from the vents
-    emberAcc += dt * (2 + 10 * Math.max(0, heat - 0.3)) * DENSITY;
-    while (emberAcc >= 1) { emitEmber(rand(130, 230), rand(300, 350)); emberAcc--; }
-    smokeAcc += dt * (1.2 + 5 * Math.max(0, heat - 0.3)) * DENSITY;
+    for (let i = inner.length - 1; i >= 0; i--) {
+      const q = inner[i];
+      q.age += dt;
+      q.px = q.x; q.py = q.y;
+      q.vx = (q.vx + rand(-60, 60) * dt + (MOUTH_C.x - q.x) * (1 + 2 * draft) * dt) * 0.97;
+      q.vy = (q.vy - (90 + 120 * draft) * dt) * 0.985;
+      q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
+      if (q.y < 262) {
+        inner.splice(i, 1);
+        exhaust.push({ kind: q.kind, size: q.size, delay: rand(0.15, 0.45) });
+      } else if (q.age > 3) inner.splice(i, 1);
+    }
+    for (let i = exhaust.length - 1; i >= 0; i--) {
+      const e = exhaust[i];
+      e.delay -= dt;
+      if (e.delay <= 0) { exhaust.splice(i, 1); ventBurst(e.kind, e.size); }
+    }
+
+    // a steady draft keeps sparks and smoke coming out of the vents; a few sparks pop out of the mouth
+    emberAcc += dt * (0.6 + 6 * draft) * DENSITY;
+    while (emberAcc >= 1) { ventBurst('spark'); emberAcc--; }
+    mouthAcc += dt * (1 + 3 * draft) * DENSITY;
+    while (mouthAcc >= 1) { emitEmber(rand(130, 230), rand(300, 350)); mouthAcc--; }
+    smokeAcc += dt * (1.2 + 8 * draft) * DENSITY;
     while (smokeAcc >= 1) { const v = pick(VENTS); emitSmoke(v[0] + 10, v[1] + 4); smokeAcc--; }
 
     for (let i = embers.length - 1; i >= 0; i--) {
@@ -505,9 +563,9 @@
       const a = ashes[i];
       a.age += dt;
       if (a.age >= a.life) { ashes.splice(i, 1); continue; }
-      a.vx = (a.vx + rand(-40, 40) * dt) * 0.98;
-      a.vy = (a.vy - 8 * dt) * 0.995;
-      a.x += a.vx * dt; a.y += a.vy * dt; a.rot += a.vr * dt;
+      a.vx = (a.vx + rand(-40, 40) * dt + Math.sin(time * 2 + a.flip) * 20 * dt) * 0.98;
+      a.vy = (a.vy - 8 * dt) * 0.99;
+      a.x += a.vx * dt; a.y += a.vy * dt; a.rot += a.vr * dt; a.flip += a.vf * dt;
     }
     for (let i = smoke.length - 1; i >= 0; i--) {
       const s = smoke[i];
@@ -526,11 +584,13 @@
     for (let i = flyers.length - 1; i >= 0; i--) {
       const f = flyers[i];
       f.t += dt / f.dur;
+      if (!f.whooshed && f.t >= f.toss) { f.whooshed = true; Sound.whoosh(); }
       if (f.t >= 1) { flyers.splice(i, 1); land(f); }
     }
 
     if (embers.length > 500) embers.splice(0, embers.length - 500);
     if (ashes.length > 300) ashes.splice(0, ashes.length - 300);
+    if (inner.length > 400) inner.splice(0, inner.length - 400);
   }
 
   // ---------------------------------------------------------------- draw
@@ -580,15 +640,36 @@
       c.restore();
     }
 
+    // paper ash being drawn up the flue
+    for (const q of inner) {
+      if (q.kind !== 'ash') continue;
+      c.save();
+      c.translate(q.x, q.y); c.rotate(q.rot);
+      c.fillStyle = '#2a2026';
+      c.strokeStyle = 'rgba(255,140,40,.9)';
+      c.lineWidth = 0.7;
+      c.fillRect(-q.size / 2, -q.size / 4, q.size, q.size / 2);
+      c.strokeRect(-q.size / 2, -q.size / 4, q.size, q.size / 2);
+      c.restore();
+    }
+
     // flames on top
     c.globalCompositeOperation = 'lighter';
+    c.lineCap = 'round';
+    for (const q of inner) {
+      if (q.kind !== 'spark') continue;
+      c.strokeStyle = 'rgba(255,200,90,.9)';
+      c.lineWidth = q.size;
+      c.beginPath(); c.moveTo(q.px, q.py); c.lineTo(q.x, q.y + 0.01); c.stroke();
+    }
     const dim = 0.55 / (0.7 + 0.3 * clamp(heat, 0.3, 2.2)); // keep a big fire from blowing out to white
     for (const p of fire) {
       const a = p.age / p.life;
       const spr = FLAME[a < 0.22 ? 0 : a < 0.5 ? 1 : a < 0.78 ? 2 : 3];
       const s = p.size * (1 - a * 0.45);
       c.globalAlpha = (1 - a) * Math.min(1, a * 8) * dim;
-      c.drawImage(spr, p.x - s, p.y - s * 1.25, s * 2, s * 2.5);
+      const st = 1.25 + 0.4 * draft;
+      c.drawImage(spr, p.x - s, p.y - s * st, s * 2, s * 2 * st);
     }
     c.globalAlpha = 1;
     c.restore();
@@ -634,12 +715,17 @@
     }
     for (const a of ashes) {
       const f = a.age / a.life;
-      const hot = a.glow ? Math.max(0, 1 - f * 3) : 0;
+      const hot = a.glow ? Math.max(0, 1 - f * 2.2) : 0;
       c.globalAlpha = (1 - f) * 0.8;
-      c.fillStyle = hot > 0 ? `rgb(${(110 + 145 * hot) | 0},${(105 + 20 * hot) | 0},${(110 - 70 * hot) | 0})` : '#6e6878';
+      const s = a.size;
       c.save();
-      c.translate(a.x, a.y); c.rotate(a.rot);
-      c.fillRect(-a.size / 2, -a.size / 4, a.size, a.size / 2);
+      c.translate(a.x, a.y); c.rotate(a.rot); c.scale(Math.cos(a.flip), 1);
+      c.beginPath();
+      c.moveTo(-s / 2, -s * 0.3); c.lineTo(s * 0.4, -s * 0.4); c.lineTo(s / 2, s * 0.25); c.lineTo(-s * 0.35, s * 0.35);
+      c.closePath();
+      c.fillStyle = hot > 0 ? '#3a2a2a' : '#6e6878';
+      c.fill();
+      if (hot > 0) { c.strokeStyle = `rgba(255,150,40,${hot})`; c.lineWidth = 0.7; c.stroke(); }
       c.restore();
     }
     c.globalAlpha = 1;
@@ -655,19 +741,32 @@
     c.globalCompositeOperation = 'source-over';
 
     for (const f of flyers) {
-      const e = f.t < 0.5 ? 2 * f.t * f.t : 1 - Math.pow(-2 * f.t + 2, 2) / 2;
-      const cx = (f.x0 + f.x1) / 2, cy = Math.min(f.y0, f.y1) - 120;
-      const u = 1 - e;
-      const x = u * u * f.x0 + 2 * u * e * cx + e * e * f.x1;
-      const y = u * u * f.y0 + 2 * u * e * cy + e * e * f.y1;
-      const w = lerp(f.w0, 62, e);
-      const squash = e > 0.7 ? lerp(1, 0.55, (e - 0.7) / 0.3) : 1;
-      drawPaperSprite(c, f.art, x, y, w, f.rot0 + f.spin * e, squash);
+      let x, y, w, rot, squash = 1;
+      if (f.t < f.toss) {
+        // toss: arc from the card to just in front of the mouth
+        const e = 1 - (1 - f.t / f.toss) ** 2, u = 1 - e;
+        const cx = (f.x0 + f.hx) / 2, cy = Math.min(f.y0, f.hy) - 110;
+        x = u * u * f.x0 + 2 * u * e * cx + e * e * f.hx;
+        y = u * u * f.y0 + 2 * u * e * cy + e * e * f.hy;
+        w = lerp(f.w0, 74, e);
+        rot = f.rot0 + f.spin * e;
+      } else {
+        // suction: hovers and flutters for a beat, then gets yanked in
+        const s = f.toss >= 1 ? 1 : (f.t - f.toss) / (1 - f.toss), e = s * s * s;
+        const flut = Math.min(1, s * 4) * (1 - e);
+        x = lerp(f.hx, f.x1, e) + Math.sin(time * 31 + f.rot0 * 10) * 4 * flut;
+        y = lerp(f.hy, f.y1, e);
+        w = lerp(f.toss ? 74 : f.w0, 62, e);
+        rot = f.rot0 + f.spin + Math.sin(time * 23 + f.x1) * 0.35 * flut;
+        squash = lerp(1, 0.55, e);
+      }
+      drawPaperSprite(c, f.art, x, y, w, rot, squash);
     }
 
     if (ghost) {
       const over = inDrop(ghost.x, ghost.y);
-      drawPaperSprite(c, cardArt.get(ghost.paper.id), ghost.x, ghost.y, 92, -0.12 + Math.sin(time * 6) * 0.03, 1);
+      const rot = -0.12 + Math.sin(time * 6) * 0.03 + Math.sin(time * 29) * 0.35 * ghost.pull;
+      drawPaperSprite(c, cardArt.get(ghost.paper.id), ghost.x, ghost.y, 92 * (1 - 0.15 * ghost.pull), rot, 1);
       if (over) {
         c.globalCompositeOperation = 'lighter';
         c.strokeStyle = `rgba(255,170,60,${0.5 + 0.3 * Math.sin(time * 10)})`;
@@ -792,7 +891,13 @@
   const inDrop = (x, y) => x > DROP.x0 && x < DROP.x1 && y > DROP.y0 && y < DROP.y1;
 
   for (const card of tray.querySelectorAll('.card')) {
-    let start = null, dragging = false, holdTimer = 0, feedTimer = 0, suppressClick = false;
+    let start = null, dragging = false, consumed = false, holdTimer = 0, feedTimer = 0, suppressClick = false;
+    const onSucked = () => {
+      dragging = false;
+      consumed = true;
+      card.classList.remove('lifted');
+      if (navigator.vibrate) navigator.vibrate([8, 30, 16]);
+    };
     const paper = byId[card.dataset.id];
 
     const stopFeeding = () => {
@@ -806,6 +911,7 @@
       card.setPointerCapture(e.pointerId);
       start = { x: e.clientX, y: e.clientY };
       dragging = false;
+      consumed = false;
       suppressClick = false;
       holdTimer = setTimeout(() => {
         suppressClick = true;
@@ -816,14 +922,18 @@
     });
 
     card.addEventListener('pointermove', (e) => {
-      if (!start || !card.hasPointerCapture(e.pointerId)) return;
+      if (!start || consumed || !card.hasPointerCapture(e.pointerId)) return;
       if (!dragging && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10 && !feedTimer) {
         dragging = true;
         suppressClick = true;
         clearTimeout(holdTimer);
         card.classList.add('lifted');
       }
-      if (dragging) ghost = { paper, ...toScene(e.clientX, e.clientY) };
+      if (dragging) {
+        const p = toScene(e.clientX, e.clientY);
+        if (!ghost) ghost = { paper, onSucked, pull: 0, x: p.x, y: p.y };
+        ghost.px = p.x; ghost.py = p.y;
+      }
     });
 
     const end = (e, cancelled) => {
