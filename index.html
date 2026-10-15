@@ -2,42 +2,143 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07040d">
+<meta name="description" content="賽博龐克風格的線上燒金紙：選擇紙錢投入霓虹金爐，看它捲曲燃燒、火星飄散。">
 <title>賽博燒金紙</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="scanlines"></div>
-<header>
-  <h1 class="glitch" data-text="賽博燒金紙">賽博燒金紙</h1>
-  <p class="sub">CYBER JOSS PAPER // 心誠則靈・數位供奉</p>
+<div class="bg" aria-hidden="true"><div class="grid-floor"></div></div>
+
+<header class="top">
+  <p class="kicker">CYBER JOSS PAPER · 數位金爐 2.0</p>
+  <h1 class="title" data-text="賽博燒金紙">賽博燒金紙</h1>
+  <p class="tagline">心誠則靈・線上焚化・心意直達</p>
 </header>
-<main>
-  <section class="furnace-wrap">
-    <div id="furnace" class="furnace">
-      <div class="roof">金 爐</div>
-      <canvas id="fire"></canvas>
-      <div class="mouth">拖曳或點擊紙錢投入</div>
+
+<main class="layout">
+  <section class="altar" aria-label="金爐">
+    <div class="stage" id="stage">
+      <canvas id="back" aria-hidden="true"></canvas>
+      <svg class="furnace" viewBox="0 0 360 440" aria-hidden="true">
+        <defs>
+          <linearGradient id="bodyG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#22102f"/>
+            <stop offset="1" stop-color="#0c0614"/>
+          </linearGradient>
+          <linearGradient id="roofG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#341247"/>
+            <stop offset="1" stop-color="#150a22"/>
+          </linearGradient>
+          <linearGradient id="goldG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fff2a8"/>
+            <stop offset=".5" stop-color="#f2b632"/>
+            <stop offset="1" stop-color="#a86c12"/>
+          </linearGradient>
+          <filter id="neon" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="soft"><feGaussianBlur stdDeviation="8"/></filter>
+        </defs>
+
+        <ellipse cx="180" cy="426" rx="160" ry="12" fill="#ff2bd6" opacity=".35" filter="url(#soft)"/>
+
+        <!-- base -->
+        <path d="M44 412 H316 V424 H44 Z" fill="url(#bodyG)" stroke="#ff2bd6" stroke-width="1.5" filter="url(#neon)"/>
+        <path d="M58 392 H302 L316 412 H44 Z" fill="url(#bodyG)" stroke="#ff2bd6" stroke-width="1.5" filter="url(#neon)"/>
+
+        <!-- body with mouth opening -->
+        <path fill-rule="evenodd" fill="url(#bodyG)" stroke="#ff2bd6" stroke-width="2" filter="url(#neon)"
+              d="M78 196 H282 V392 H78 Z M112 372 V292 Q112 258 146 254 H214 Q248 258 248 292 V372 Z"/>
+        <g stroke="#22e6ff" stroke-width="1" opacity=".55">
+          <path d="M92 204 V384 M268 204 V384"/>
+          <path d="M86 384 H274"/>
+        </g>
+        <g fill="#22e6ff" opacity=".7">
+          <circle cx="92" cy="204" r="2"/><circle cx="268" cy="204" r="2"/>
+          <circle cx="92" cy="384" r="2"/><circle cx="268" cy="384" r="2"/>
+        </g>
+        <path d="M112 372 V292 Q112 258 146 254 H214 Q248 258 248 292 V372" fill="none" stroke="url(#goldG)" stroke-width="3"/>
+        <path d="M100 372 H260 V382 H100 Z" fill="#2a1408" stroke="url(#goldG)" stroke-width="1.5"/>
+
+        <!-- plaque -->
+        <rect x="142" y="208" width="76" height="36" rx="3" fill="#2a0a12" stroke="url(#goldG)" stroke-width="2"/>
+        <text x="180" y="234" text-anchor="middle" font-family="'Noto Serif TC', serif" font-weight="900" font-size="22" fill="url(#goldG)" letter-spacing="4">金爐</text>
+
+        <!-- lower roof -->
+        <path d="M96 172 L122 150 H238 L264 172 Z" fill="url(#roofG)" stroke="#22e6ff" stroke-width="1.5" filter="url(#neon)"/>
+        <g stroke="#22e6ff" stroke-width=".8" opacity=".45">
+          <path d="M130 152 L118 171 M146 152 L140 171 M162 152 L160 171 M180 152 V171 M198 152 L200 171 M214 152 L220 171 M230 152 L242 171"/>
+        </g>
+        <path d="M36 176 Q68 186 96 172 H264 Q292 186 324 176 Q310 192 290 198 H70 Q50 192 36 176 Z"
+              fill="url(#roofG)" stroke="#22e6ff" stroke-width="2" filter="url(#neon)"/>
+
+        <!-- chimney with vents -->
+        <path d="M132 150 V116 H228 V150 Z" fill="url(#bodyG)" stroke="#ff2bd6" stroke-width="1.5" filter="url(#neon)"/>
+        <g fill="#0a0306" stroke="url(#goldG)" stroke-width="1">
+          <rect x="140" y="124" width="20" height="18" rx="2"/>
+          <rect x="170" y="124" width="20" height="18" rx="2"/>
+          <rect x="200" y="124" width="20" height="18" rx="2"/>
+        </g>
+
+        <!-- upper roof -->
+        <path d="M142 98 L160 84 H200 L218 98 Z" fill="url(#roofG)" stroke="#22e6ff" stroke-width="1.5" filter="url(#neon)"/>
+        <path d="M100 102 Q126 110 142 98 H218 Q234 110 260 102 Q250 114 232 120 H128 Q110 114 100 102 Z"
+              fill="url(#roofG)" stroke="#22e6ff" stroke-width="2" filter="url(#neon)"/>
+
+        <!-- gourd finial -->
+        <g fill="url(#goldG)" filter="url(#neon)">
+          <circle cx="180" cy="72" r="11"/>
+          <circle cx="180" cy="53" r="7.5"/>
+          <rect x="178.5" y="34" width="3" height="12" rx="1.5"/>
+        </g>
+      </svg>
     </div>
-    <div class="stats">已焚化：<span id="count">0</span> 張</div>
-    <div id="blessing" class="blessing">🙏 誠心祈願，萬事如意</div>
+
+    <div class="readout">
+      <div class="counter">
+        <span class="label">累計焚化</span>
+        <span id="total" class="num">0</span>
+        <span class="unit">張</span>
+      </div>
+      <div class="counter minor">
+        <span class="label">本次</span>
+        <span id="session" class="num">0</span>
+        <span class="unit">張</span>
+      </div>
+    </div>
+    <p id="blessing" class="blessing" aria-live="polite">誠心祈願・萬事如意</p>
   </section>
-  <section class="papers">
-    <h2>選擇紙錢</h2>
-    <div class="tray" id="tray">
-      <div class="paper gold" data-type="金紙" data-label="金紙">金紙</div>
-      <div class="paper silver" data-type="銀紙" data-label="銀紙">銀紙</div>
-      <div class="paper rebirth" data-type="往生錢" data-label="往生錢">往生錢</div>
-      <div class="paper custom" data-type="自訂" data-label="願望" id="customPaper">願望</div>
+
+  <section class="panel" aria-labelledby="trayTitle">
+    <div class="panel-head">
+      <h2 id="trayTitle">選擇紙錢</h2>
+      <p class="hint">點一下投入・長按連燒・拖曳入爐</p>
     </div>
-    <div class="custom-row">
-      <input id="customText" maxlength="8" placeholder="自訂文字（例：願望）">
-      <button id="setCustom">寫上</button>
-    </div>
-    <button id="sound" class="toggle">🔇 音效：關</button>
+    <div class="tray" id="tray"></div>
+
+    <form class="wish" id="wishForm" autocomplete="off">
+      <label for="wishText">寫在「願望紙」上</label>
+      <div class="row">
+        <input id="wishText" maxlength="12" placeholder="例：身體健康" enterkeyhint="done">
+        <button type="submit">寫上</button>
+      </div>
+    </form>
+
+    <button id="soundBtn" class="toggle" type="button" aria-pressed="false">
+      <span class="dot" aria-hidden="true"></span><span class="txt">音效：關</span>
+    </button>
   </section>
 </main>
-<footer>本頁僅供娛樂與心意表達，敬天惜福。</footer>
+
+<footer>本頁僅供娛樂與心意表達・敬天惜福・真實焚燒請注意用火安全</footer>
+
+<canvas id="front" aria-hidden="true"></canvas>
 <script src="script.js"></script>
 </body>
 </html>
